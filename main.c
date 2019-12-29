@@ -149,6 +149,11 @@ int main(int argc, char** argv) {
 	vnc_client->MallocFrameBuffer = resize;
 	vnc_client->GotFrameBufferUpdate = update;
 	vnc_client->canHandleNewFBSize = TRUE;
+	if(!resize(vnc_client)) {
+		err = ENOMEM;
+		fprintf(stderr, "Failed to set initial framebuffer\n");
+		goto fail_client;
+	}
 
 //	vnc_client->serverHost = strdup(host);
 //	vnc_client->serverPort = port;
