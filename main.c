@@ -18,13 +18,21 @@ union pixel_rgba {
 	uint32_t rgba;
 };
 
+pthread_mutex_t resize_lock;
+
 static rfbBool resize(rfbClient* vnc_client) {
+	pthread_mutex_lock(&resize_lock);
 	void* buffer = calloc(vnc_client->width * vnc_client->height, sizeof(union pixel_rgba));
 	if(!buffer) {
 		fprintf(stderr, "Failed to allocate client framebuffer, out of memory\n");
+		pthread_mutex_unlock(&resize_lock);
 		return FALSE;
 	}
+	if(vnc_client->frameBuffer) {
+		free(vnc_client->frameBuffer);
+	}
 	vnc_client->frameBuffer = buffer;
+	pthread_mutex_unlock(&resize_lock);
 	return TRUE;
 }
 
@@ -39,16 +47,11 @@ static void fbcopy(union pixel_rgba* dst, unsigned int dst_width, unsigned int d
 					union pixel_rgba* src, unsigned int src_width, unsigned int src_height) {
 	unsigned int height = min(dst_height, src_height);
 	unsigned int width = min(dst_width, src_width);
-	printf("Updating %ux%u pixels\n", width, height);
 	while(height--) {
 		union pixel_rgba* dst_line_base = dst + (dst_width * height);
 		union pixel_rgba* src_line_base = src + (src_width * height);
 		memcpy(dst_line_base, src_line_base, width * sizeof(union pixel_rgba));
 	}
-}
-
-static void update(rfbClient* vnc_client, int x, int y, int w, int h) {
-	
 }
 
 static void usage(char* binary) {
@@ -74,6 +77,8 @@ int main(int argc, char** argv) {
 	struct timespec before, after;
 	long long time_delta;
 	int screen_update_rate = 60;
+
+	pthread_mutex_init(&resize_lock, NULL);
 
 	while((opt = getopt(argc, argv, "w:h:r:l:?")) != -1) {
 		switch(opt) {
@@ -144,25 +149,19 @@ int main(int argc, char** argv) {
 		goto fail;
 	}
 
-	vnc_client->width = width;
-	vnc_client->height = height;
 	vnc_client->MallocFrameBuffer = resize;
-	vnc_client->GotFrameBufferUpdate = update;
 	vnc_client->canHandleNewFBSize = TRUE;
-	if(!resize(vnc_client)) {
-		err = ENOMEM;
-		fprintf(stderr, "Failed to set initial framebuffer\n");
-		goto fail_client;
-	}
+	vnc_client->appData.compressLevel = 0;
+	vnc_client->appData.enableJPEG = FALSE;
 
-//	vnc_client->serverHost = strdup(host);
-//	vnc_client->serverPort = port;
+	vnc_client->serverHost = strdup(host);
+	vnc_client->serverPort = port;
 
 	printf("Connecting to %s:%d\n", host, port);
-	if(!ConnectToRFBServer(vnc_client, host, port)) {
+	if(!rfbInitClient(vnc_client, NULL, NULL)) {
 		err = 1;
 		fprintf(stderr, "Failed to initialize VNC client\n");
-		goto fail_client;
+		goto fail;
 	}
 
 	vnc_server = rfbGetScreen(NULL, NULL, width, height, 8, 3, 4);
@@ -187,24 +186,34 @@ int main(int argc, char** argv) {
 	while(!do_exit) {
 		clock_gettime(CLOCK_MONOTONIC, &before);
 
+		pthread_mutex_lock(&resize_lock);
 		fbcopy((union pixel_rgba*)vnc_server->frameBuffer, width, height,
 			   (union pixel_rgba*)vnc_client->frameBuffer, vnc_client->width, vnc_client->height);
-		printf("Update\n");
 		rfbMarkRectAsModified(vnc_server, 0, 0, width, height);
+		pthread_mutex_unlock(&resize_lock);
 
-		clock_gettime(CLOCK_MONOTONIC, &after);
-		time_delta = get_timespec_diff(&after, &before);
-		time_delta = 1000000000UL / screen_update_rate - time_delta;
-		if(time_delta > 0) {
-			usleep(time_delta / 1000UL);
-		}
+		do {
+			clock_gettime(CLOCK_MONOTONIC, &after);
+			time_delta = get_timespec_diff(&after, &before);
+			time_delta = max(1000000000UL / screen_update_rate - time_delta, 0);
+			err = WaitForMessage(vnc_client, time_delta / 1000UL);
+			if(err < 0) {
+				fprintf(stderr, "Failed to receive RFB message: %d\n", err);
+				goto fail_server_fb;
+			}
+			if(err > 0) {
+				if(!HandleRFBServerMessage(vnc_client)) {
+					fprintf(stderr, "Failed to handle RFB message\n");
+					goto fail_server_fb;
+				}
+			}
+		} while(time_delta > 0);
 	}
 
 fail_server_fb:
 	free(vnc_server->frameBuffer);
 fail_server:
 	rfbScreenCleanup(vnc_server);
-fail_client:
 	rfbClientCleanup(vnc_client);
 fail:
 	return err;
