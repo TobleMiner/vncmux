@@ -55,7 +55,7 @@ static void fbcopy(union pixel_rgba* dst, unsigned int dst_width, unsigned int d
 }
 
 static void usage(char* binary) {
-	fprintf(stderr, "Usage: %s [-w <width>] [-h <height>] [-r <update rate>] [-l <listen port>] <vnc host[:port]>\n", binary);
+	fprintf(stderr, "Usage: %s [-w <width>] [-h <height>] [-r <update rate>] [-l <listen port>] <vnc host> <port>\n", binary);
 	exit(1);
 }
 
@@ -72,7 +72,6 @@ int main(int argc, char** argv) {
 	unsigned short port = 5900;
 	unsigned short listen_port = 5901;
 	char* host = "127.0.0.1";
-	char* port_delim;
 	bool do_exit = false;
 	struct timespec before, after;
 	long long time_delta;
@@ -127,21 +126,18 @@ int main(int argc, char** argv) {
 	argc -= optind;
 	optind = 0;
 
-	if(argc < 1) {
+	if(argc < 2) {
 		usage(binary);
 	}
 
 	host = argv[0];
-	if((port_delim = strchr(host, ':'))) {
-		*port_delim = '\0';
-		tmp = atoi(port_delim + 1);
-		if(tmp < 0 || port > 65535) {
-			err = EINVAL;
-			fprintf(stderr, "Invalid port '%d'\n", tmp); 
-			goto fail;
-		}
-		port = tmp;
+	tmp = atoi(argv[1]);
+	if(tmp < 0 || port > 65535) {
+		err = EINVAL;
+		fprintf(stderr, "Invalid port '%d'\n", tmp); 
+		goto fail;
 	}
+	port = tmp;
 
 	vnc_client = rfbGetClient(8, 3, 4);
 	if(!vnc_client) {
