@@ -10,7 +10,7 @@ endif
 
 DEPS = libvncserver libvncclient
 DEPFLAGS_CC = `pkg-config --cflags $(DEPS)`
-DEPFLAGS_LD = `pkg-config --libs $(DEPS)`
+DEPFLAGS_LD = `pkg-config --libs $(DEPS)` -lpthread
 OBJS = $(patsubst %.c,%.o,$(wildcard *.c))
 HDRS = $(wildcard *.h)
 
