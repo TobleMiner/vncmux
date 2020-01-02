@@ -164,11 +164,12 @@ int main(int argc, char** argv) {
 	if(!vnc_server) {
 		err = ENOMEM;
 		fprintf(stderr, "Failed to initialize VNC server\n");
-		goto fail_server;
+		goto fail_client;
 	}
 
 	vnc_server->autoPort = FALSE;
 	vnc_server->port = vnc_server->ipv6port = listen_port;
+	vnc_server->desktopName = "vncmux";
 	vnc_server->frameBuffer = calloc(width * height, sizeof(union pixel_rgba));
 	if(!vnc_server->frameBuffer) {
 		err = ENOMEM;
@@ -209,7 +210,10 @@ int main(int argc, char** argv) {
 fail_server_fb:
 	free(vnc_server->frameBuffer);
 fail_server:
+	alarm(3);
 	rfbScreenCleanup(vnc_server);
+fail_client:
+	alarm(3);
 	rfbClientCleanup(vnc_client);
 fail:
 	return err;
