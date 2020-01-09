@@ -132,7 +132,7 @@ int main(int argc, char** argv) {
 
 	host = argv[0];
 	tmp = atoi(argv[1]);
-	if(tmp < 0 || port > 65535) {
+	if(tmp < 0 || tmp > 65535) {
 		err = EINVAL;
 		fprintf(stderr, "Invalid port '%d'\n", tmp); 
 		goto fail;
