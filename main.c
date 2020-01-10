@@ -201,7 +201,7 @@ int main(int argc, char** argv) {
 			if(err > 0) {
 				if(!HandleRFBServerMessage(vnc_client)) {
 					fprintf(stderr, "Failed to handle RFB message\n");
-					goto fail_server_fb;
+//					goto fail_server_fb;
 				}
 			}
 		} while(time_delta > 0);
