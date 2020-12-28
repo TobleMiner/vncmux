@@ -21,7 +21,7 @@ Options:
   -w <width>       Width of drawing surface in pixels (default: 1920)
   -h <height>      Height of drawing surface in pixels (default: 1080)
   -r <update rate> VNC update rate in Hz (default: 60)
-  -l <listen port> Port to listen on (default: 5900)
+  -l <listen port> Port to listen on (default: 5901)
   -?               Show this help
 ```
 
@@ -29,13 +29,13 @@ Options:
 
 VNCmux can be used infront of other VNC servers to improve performance and stability of downstream applications.
 For this type of scenario the downstream application is configured to serve their VNC server via a non-standart port, for
-example 5901. Then external access to that port is disallowed.
+example 6000. Then external access to that port is disallowed.
 Finally vncmux is started to serve a VNC server on the standard port.
 
 ```bash
-iptables -I INPUT 1 --proto tcp --dport 5901 -j REJECT
-ip6tables -I INPUT 1 --proto tcp --dport 5901 -j REJECT
+iptables -I INPUT 1 --proto tcp --dport 6000 -j REJECT
+ip6tables -I INPUT 1 --proto tcp --dport 6000 -j REJECT
 
-vncmux 127.0.0.1 5901
+vncmux -l 5900 127.0.0.1 6000
 
 ```
