@@ -56,6 +56,12 @@ static void fbcopy(union pixel_rgba* dst, unsigned int dst_width, unsigned int d
 
 static void usage(char* binary) {
 	fprintf(stderr, "Usage: %s [-w <width>] [-h <height>] [-r <update rate>] [-l <listen port>] <vnc host> <port>\n", binary);
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "  -w <width>       Width of drawing surface in pixels (default: 1920)\n");
+	fprintf(stderr, "  -h <height>      Height of drawing surface in pixels (default: 1080)\n");
+	fprintf(stderr, "  -r <update rate> VNC update rate in Hz (default: 60)\n");
+	fprintf(stderr, "  -l <listen port> Port to listen on (default: 5900)\n");
+	fprintf(stderr, "  -?               Show this help\n");
 	exit(1);
 }
 
