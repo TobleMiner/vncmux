@@ -173,6 +173,12 @@ int main(int argc, char** argv) {
 		goto fail_client;
 	}
 
+	// We need to set bitsPerPixel and depth to the correct values,
+	// otherwise some VNC clients (like gstreamer) won't work
+	vnc_server->bitsPerPixel = 32;
+	vnc_server->depth = 24;
+	vnc_server->serverFormat.depth = 24;
+
 	vnc_server->autoPort = FALSE;
 	vnc_server->port = vnc_server->ipv6port = listen_port;
 	vnc_server->desktopName = "vncmux";
